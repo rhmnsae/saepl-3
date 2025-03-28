@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Sentimen X</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D3.js and d3-cloud for word cloud -->
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud@latest/build/d3.layout.cloud.js"></script>
+    <style>
+        .download-report-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            margin-top: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .download-report-btn:hover {
+            background-color: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .download-report-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .download-report-container {
+            text-align: center;
+            margin: 2rem 0;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-3">
+                <div class="logo">
+                    Analisis Sentimen X
+                </div>
+                <nav>
+                    <a href="#main-content" class="nav-tabs-link active" data-tab="input">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                        Input Data
+                    </a>
+                    <a href="#main-content" class="nav-tabs-link disabled" data-tab="results" title="Lakukan analisis terlebih dahulu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        Hasil Analisis
+                    </a>
+                    <a href="#main-content" class="nav-tabs-link disabled" data-tab="evaluation" title="Lakukan analisis terlebih dahulu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        Evaluasi Kebijakan
+                    </a>
+                    <a href="/download_report" id="download-report-btn" class="disabled" title="Lakukan analisis terlebih dahulu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Unduh Report
+                    </a>
+                    
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="container my-4">
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
+        
+        <!-- Main Content Section -->
+        <div id="main-content">
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+            <!-- Input Section -->
+            <section id="input" class="main-tab-content active">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        <h2 class="card-title">Unggah Data dan Tentukan Topik</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="analysis-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="title" class="form-label fw-bold">
+                                        Judul Analisis
+                                    </label>
+                                    <input type="text" class="form-control" id="title" placeholder="Contoh: Analisis Sentimen Kampanye #AstaCita" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="csv-file" class="form-label fw-bold">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                        Unggah File CSV X
+                                    </label>
+                                    <input type="file" class="form-control" id="csv-file" accept=".csv" required>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-dark" id="submit-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                Mulai Analisis
+                            </button>
+                        </form>
+                        <div id="loading" class="text-center mt-3 d-none">
+                            <div class="spinner-border text-dark" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Menganalisis data, mohon tunggu...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section (hidden until analysis is done) -->
+            <section id="results" class="main-tab-content d-none">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        <h2 class="card-title">Hasil Analisis Sentimen</h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-3" id="result-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-content" type="button" role="tab" aria-controls="dashboard-content" aria-selected="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                    Dashboard
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tweets-tab" data-bs-toggle="tab" data-bs-target="#tweets-content" type="button" role="tab" aria-controls="tweets-content" aria-selected="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                    Tweet List
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="topics-tab" data-bs-toggle="tab" data-bs-target="#topics-content" type="button" role="tab" aria-controls="topics-content" aria-selected="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                    Topik & Hashtag
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="charts-tab" data-bs-toggle="tab" data-bs-target="#charts-content" type="button" role="tab" aria-controls="charts-content" aria-selected="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                                    Visualisasi
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="word-analysis-tab" data-bs-toggle="tab" data-bs-target="#word-analysis-content" type="button" role="tab" aria-controls="word-analysis-content" aria-selected="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                    Analisis Kata
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <!-- Dashboard Tab -->
+                        <div class="tab-content" id="result-tab-content">
+                            <div class="tab-pane fade show active" id="dashboard-content" role="tabpanel" aria-labelledby="dashboard-tab">
+                                <h3 class="section-title mb-3">
+                                    Analisis Sentimen: <span id="title-placeholder"></span>
+                                </h3>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="stats-card">
+                                            <div class="icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
+                                            </div>
+                                            <div class="text-secondary small">Total Tweet</div>
+                                            <div class="display-4 fw-bold" id="total-tweets">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="stats-card positive" id="positive-stats">
+                                            <div class="icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                            </div>
+                                            <div class="text-secondary small">Sentiment Positif</div>
+                                            <div class="display-4 fw-bold" id="positive-count">0</div>
+                                            <div id="positive-percent">0%</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="stats-card neutral" id="neutral-stats">
+                                            <div class="icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            </div>
+                                            <div class="text-secondary small">Sentiment Netral</div>
+                                            <div class="display-4 fw-bold" id="neutral-count">0</div>
+                                            <div id="neutral-percent">0%</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="stats-card negative" id="negative-stats">
+                                            <div class="icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+                                            </div>
+                                            <div class="text-secondary small">Sentiment Negatif</div>
+                                            <div class="display-4 fw-bold" id="negative-count">0</div>
+                                            <div id="negative-percent">0%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h5 class="section-title mb-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                        Distribusi Sentimen
+                                    </h5>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" id="positive-segment" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                        <div class="progress-bar bg-warning" id="neutral-segment" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                        <div class="progress-bar bg-danger" id="negative-segment" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h5 class="section-title mb-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg>
+                                        Hashtag Teratas
+                                    </h5>
+                                    <div class="d-flex flex-wrap gap-2" id="top-hashtags">
+                                        <!-- Akan diisi secara dinamis -->
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                            Top Users
+                                        </h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Username</th>
+                                                        <th>Tweet Count</th>
+                                                        <th>Avg. Engagement</th>
+                                                        <th>Sentimen Dominan</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="top-users">
+                                                    <!-- Akan diisi secara dinamis -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                            Main Topic
+                                        </h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Topik</th>
+                                                        <th>Frekuensi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="main-topics">
+                                                    <!-- Akan diisi secara dinamis -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tweets Tab -->
+                            <div class="tab-pane fade" id="tweets-content" role="tabpanel" aria-labelledby="tweets-tab">
+                                <div class="row mb-3">
+                                    <div class="col-md-4 mb-2">
+                                        <label for="sentiment-filter" class="form-label fw-bold">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                                            Filter berdasarkan Sentimen
+                                        </label>
+                                        <select class="form-select" id="sentiment-filter">
+                                            <option value="all">Semua Sentimen</option>
+                                            <option value="Positif">Positif</option>
+                                            <option value="Netral">Netral</option>
+                                            <option value="Negatif">Negatif</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-2">
+                                        <label for="tweet-search" class="form-label fw-bold">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                            Cari Tweet
+                                        </label>
+                                        <input type="text" class="form-control" id="tweet-search" placeholder="Ketik untuk mencari...">
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-2">
+                                        <label for="items-per-page" class="form-label fw-bold">
+                                            Entri per halaman
+                                        </label>
+                                        <select class="form-select" id="items-per-page">
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div id="tweet-container" class="tweet-list">
+                                    <!-- Akan diisi secara dinamis -->
+                                </div>
+                                
+                                <div id="pagination-container" class="mt-3">
+                                    <!-- Pagination akan diisi secara dinamis -->
+                                </div>
+                            </div>
+                            
+                            <!-- Topics Tab -->
+                            <div class="tab-pane fade" id="topics-content" role="tabpanel" aria-labelledby="topics-tab">
+                                <div class="row">
+                                    <!-- Kolom Kiri: Topik Utama -->
+                                    <div class="col-md-6">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                            </svg>
+                                            Topik Utama
+                                        </h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Topik</th>
+                                                        <th>Frekuensi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="topik-utama">
+                                                    <!-- Akan diisi secara dinamis -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                
+                                    <!-- Kolom Kanan: Hashtag Populer & Sentimen Berdasarkan Hashtag -->
+                                    <div class="col-md-6 d-flex flex-column">
+                                        <!-- Hashtag Populer -->
+                                        <div class="mb-4">
+                                            <h5 class="section-title mb-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M4 9h16"></path>
+                                                    <path d="M4 15h16"></path>
+                                                    <path d="M10 3L8 21"></path>
+                                                    <path d="M16 3l-2 18"></path>
+                                                </svg>
+                                                Hashtag Populer
+                                            </h5>
+                                            <div class="d-flex flex-wrap gap-2" id="all-hashtags">
+                                                <!-- Akan diisi secara dinamis -->
+                                            </div>
+                                        </div>
+                                
+                                        
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h5 class="section-title mb-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                        Sentimen per Hashtag
+                                    </h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Hashtag</th>
+                                                    <th>Sentimen Positif</th>
+                                                    <th>Sentimen Netral</th>
+                                                    <th>Sentimen Negatif</th>
+                                                    <th>Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="hashtag-sentiment">
+                                                <!-- Akan diisi secara dinamis -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Charts Tab -->
+                            <div class="tab-pane fade" id="charts-content" role="tabpanel" aria-labelledby="charts-tab">
+                                <div class="mb-4">
+                                    <h5 class="section-title mb-3">
+                                        Distribusi Sentimen
+                                    </h5>
+                                    <div class="chart-container text-center">
+                                        <img id="sentiment-plot" src="" alt="Grafik Distribusi Sentimen" class="img-fluid">
+                                    </div>
+                                </div>
+                                                            
+                                 <!-- Sentimen Berdasarkan Hashtag -->
+                                 <div class="mb-4">
+                                    <h5 class="section-title mb-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M18 20V10"></path>
+                                            <path d="M12 20V4"></path>
+                                            <path d="M6 20v-6"></path>
+                                        </svg>
+                                        Sentimen Berdasarkan Hashtag
+                                    </h5>
+                                    <div class="chart-container">
+                                        <div id="sentiment-by-hashtag-chart"></div>
+                                    </div>
+                                </div>   
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                            Sentimen Berdasarkan Lokasi (Top 5)
+                                        </h5>
+                                        <div class="chart-container">
+                                            <div id="sentiment-by-location-chart"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            Sentimen Berdasarkan Bahasa (Top 5)
+                                        </h5>
+                                        <div class="chart-container">
+                                            <div id="sentiment-by-language-chart"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Word Analysis Tab -->
+                            <div class="tab-pane fade" id="word-analysis-content" role="tabpanel" aria-labelledby="word-analysis-tab">
+                                <div class="word-cloud-wrapper">
+                                    <h5 class="section-title word-cloud-title">Word Cloud</h5>
+                                    <div class="word-cloud-container" id="word-cloud-container">
+                                        <!-- Word cloud will be rendered here -->
+                                    </div>
+                                </div>
+                                
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                            Kata Umum dalam Sentimen Positif
+                                        </h5>
+                                        <div class="chart-container" id="positive-words-chart">
+                                            <!-- Chart will be rendered here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Kata Umum dalam Sentimen Netral
+                                        </h5>
+                                        <div class="chart-container" id="neutral-words-chart">
+                                            <!-- Chart will be rendered here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-4">
+                                        <h5 class="section-title mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+                                            Kata Umum dalam Sentimen Negatif
+                                        </h5>
+                                        <div class="chart-container" id="negative-words-chart">
+                                            <!-- Chart will be rendered here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Evaluation Section with Chatbot -->
+            <section id="evaluation" class="main-tab-content d-none">
+                <div class="card">
+                    <div class="card-header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <h2 class="card-title">Evaluasi Kebijakan</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>Gunakan chatbot evaluasi kebijakan untuk mendapatkan analisis mendalam tentang implikasi kebijakan berdasarkan sentimen publik yang terdeteksi. Chatbot ini menggunakan AI Gemini untuk menganalisis data dan memberikan rekomendasi kebijakan yang terperinci.</p>
+                        
+                        <div class="chatbot-container mt-4">
+                            <div class="chatbot-header">
+                                <div class="chatbot-avatar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" fill="none">
+                                        <!-- Lingkaran Kepala -->
+                                        <circle cx="50" cy="50" r="40" fill="black" stroke="white" stroke-width="3"/>
+                                        
+                                        <!-- Mata Kiri -->
+                                        <circle cx="35" cy="40" r="5" fill="white"/>
+                                        
+                                        <!-- Mata Kanan -->
+                                        <circle cx="65" cy="40" r="5" fill="white"/>
+                                        
+                                        <!-- Mulut -->
+                                        <path d="M35 60 Q50 75, 65 60" stroke="white" stroke-width="3" fill="none"/>
+                                        
+                                        <!-- Antena -->
+                                        <line x1="50" y1="10" x2="50" y2="20" stroke="white" stroke-width="3"/>
+                                        <circle cx="50" cy="10" r="4" fill="white"/>
+                                      </svg>
+                                </div>
+                                <div>
+                                    <h5 class="chatbot-title mb-0">Chat Policy Assistant</h5>
+                                    <div class="chatbot-status">Online</div>
+                                </div>
+                            </div>
+                            
+                            <div id="chatbot-messages" class="chatbot-messages">
+                                <!-- Initial message will be added dynamically -->
+                            </div>
+                            
+                            <div class="chatbot-topic-buttons" id="chatbot-topic-buttons">
+                                <!-- Topic buttons will be added dynamically -->
+                            </div>
+                            
+                            <div class="chatbot-input-area">
+                                <input type="text" id="chatbot-input" class="chatbot-input" placeholder="Ketik Pesan">
+                                <button id="chatbot-send" class="chatbot-send">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Analisis Sentimen X</h5>
+                    <p class="small">Aplikasi analisis sentimen untuk data X dengan visualisasi interaktif dan evaluasi kebijakan.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="small">&copy; 2025 Saepl</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
